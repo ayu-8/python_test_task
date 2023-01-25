@@ -31,6 +31,9 @@ def parse_response_to_dict(response_text):
     currency_dict = {"date":[], "value":[], "time":[]}
     for rate in rates:
         date, time = rate["moment"].split(" ")
+        # add only evening clearing
+        if int(time[:2]) < 18:
+            continue
         year, month, day = date.split("-")
         hour, minute, second = time.split(":")
         currency_dict["date"].append(datetime.date(int(year), int(month), int(day)))
