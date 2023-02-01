@@ -14,21 +14,27 @@ from os.path import basename, isfile
 from bs4 import BeautifulSoup as bs
 from openpyxl import Workbook, load_workbook, utils
 
+
 # make request
 def get_data(currency, moment_start, moment_end):
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0)\
+                       Gecko/20100101 Firefox/109.0"
     }
     url = f"https://www.moex.com/export/derivatives/currency-rate.aspx?\
-            language=ru&currency={currency}&moment_start={moment_start}&moment_end={moment_end}"
+            language=ru&currency={currency}&moment_start={moment_start}\
+            &moment_end={moment_end}"
     response = requests.get(url, headers = headers)
+
     return response.text
 
-# parse response into dictionary by colums
+
+# parse response into dictionary by columns
 def parse_response_to_dict(response_text):
     soup = bs(response_text, features="lxml-xml")    
     rates = soup.find_all("rate")
     currency_dict = {"date":[], "value":[], "time":[]}
+
     for rate in rates:
         date, time = rate["moment"].split(" ")
         # add only evening clearing
@@ -36,16 +42,20 @@ def parse_response_to_dict(response_text):
             continue
         year, month, day = date.split("-")
         hour, minute, second = time.split(":")
-        currency_dict["date"].append(datetime.date(int(year), int(month), int(day)))
+        currency_dict["date"].append(datetime.date(int(year),int(month),int(day)))
         currency_dict["value"].append(float(rate["value"]))
-        currency_dict["time"].append(datetime.time(int(hour), int(minute), int(second)))
+        currency_dict["time"].append(datetime.time(int(hour),int(minute),int(second))
+        )
+
     return currency_dict
+
 
 # make Excel table
 def make_xlsx(data_dict):
     wb = Workbook()
     ws = wb.active
     ws.title = moment
+
     # column names
     ws.append([
         f"Дата {currency1}",
@@ -56,6 +66,7 @@ def make_xlsx(data_dict):
         f"Время {currency2}",
         "Результат"
         ])
+
     # add parsed data
     col = 1
     for currency in data_dict.keys():
@@ -65,19 +76,23 @@ def make_xlsx(data_dict):
                 ws.cell(column=col,row=row).value = elem
                 row += 1
             col += 1
+
     # add results column
     excel_row_num = row - 1
     for row in range(2, excel_row_num+1):
         ws[f"G{row}"].value = f"=B{row}/E{row}"
+
     # format document
     column_letters = tuple(
         utils.get_column_letter(col_number + 1)
         for col_number in range(8)
         )
+
     for column_letter in column_letters:
         ws.column_dimensions[column_letter].bestFit = True
 
     wb.save(report_name)
+
 
 # make text for message body
 def gen_email_body_text(num):
@@ -89,6 +104,7 @@ def gen_email_body_text(num):
     else:
         text += "строк."
     return text
+
 
 # send email with attachment
 def send_email(params_path, attachment_path):    
@@ -121,7 +137,7 @@ def send_email(params_path, attachment_path):
         server.send_message(msg, from_addr=params["sender"], to_addrs=params["reciever"])
 
 if __name__ == "__main__":
-    # init variables
+    # initialize variables
     currency1 = "USD/RUB"
     currency2 = "JPY/RUB"
     today = datetime.date.today()
@@ -140,11 +156,6 @@ if __name__ == "__main__":
     data_dict = dict.fromkeys([currency1, currency2])
     
     try:
-        # with open("resp1.xml", "r") as resp1:
-        #     with open ("resp2.xml", "r") as resp2:
-        #         data_dict[currency1] = parse_response_to_dict(resp1)
-        #         data_dict[currency2] = parse_response_to_dict(resp2)
-
         print(f"Checking for {report_name}")
 
         # check if report exists
