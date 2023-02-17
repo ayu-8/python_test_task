@@ -180,9 +180,9 @@ def main():
         else:
             print("Found!")   
         # send email
-        # print(f"Sending {report_name}...")
-        # send_email(params_path, attachment_path)
-        # print("Success")
+        print(f"Sending {report_name}...")
+        send_email(params_path, attachment_path)
+        print("Success")
 
     except:
         print(f"########\n{traceback.format_exc()}########\n")
