@@ -1,7 +1,7 @@
 {
-"reciever":"ayu.8@ya.ru",
+"recipient":"ayu.8@ya.ru",
 "sender":"ayu.8@ya.ru",
-"passw":"********",
+"password":"********",
 "server":"smtp.yandex.ru",
 "port":"465"
 }

@@ -18,12 +18,13 @@ from openpyxl import Workbook, load_workbook, utils
 # make request
 def get_data(currency, moment_start, moment_end):
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0)\
-                       Gecko/20100101 Firefox/109.0"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) \
+Gecko/20100101 Firefox/109.0"
     }
+
     url = f"https://www.moex.com/export/derivatives/currency-rate.aspx?\
-            language=ru&currency={currency}&moment_start={moment_start}\
-            &moment_end={moment_end}"
+language=ru&currency={currency}&moment_start={moment_start}&moment_end={moment_end}"
+
     response = requests.get(url, headers = headers)
 
     return response.text
@@ -51,11 +52,16 @@ def parse_response_to_dict(response_text):
 
 
 # make Excel table
-def make_xlsx(data_dict):
+def make_xlsx(data_dict, report_name):
     wb = Workbook()
     ws = wb.active
-    ws.title = moment
+    ws.title = "Report"
 
+    # note: As of Python version 3.11, dictionaries are ordered
+    # so iterating through dict will be consistent 
+    iterator = iter(data_dict)
+    currency1 = next(iterator)
+    currency2 = next(iterator)
     # column names
     ws.append([
         f"Дата {currency1}",
@@ -69,8 +75,8 @@ def make_xlsx(data_dict):
 
     # add parsed data
     col = 1
-    for currency in data_dict.keys():
-       for key in data_dict[currency].keys():
+    for currency in data_dict:
+       for key in data_dict[currency]:
             row = 2
             for elem in data_dict[currency][key]:
                 ws.cell(column=col,row=row).value = elem
@@ -85,7 +91,7 @@ def make_xlsx(data_dict):
     # format document
     column_letters = tuple(
         utils.get_column_letter(col_number + 1)
-        for col_number in range(8)
+        for col_number in range(ws.max_column + 1)
         )
 
     for column_letter in column_letters:
@@ -115,7 +121,7 @@ def send_email(params_path, attachment_path):
 
     msg = MIMEMultipart()
     msg["From"] = params["sender"]
-    msg["To"] = params["reciever"]
+    msg["To"] = params["recipient"]
     msg["Subject"] = "Ежемесячный отчет по индикативным курсам валют"
 
     with open(attachment_path, "rb") as file:
@@ -133,10 +139,10 @@ def send_email(params_path, attachment_path):
 
     context = ssl.create_default_context()
     with smtplib.SMTP_SSL(params["server"], params["port"], context=context) as server:
-        server.login(params["sender"], params["passw"])
-        server.send_message(msg, from_addr=params["sender"], to_addrs=params["reciever"])
+        server.login(params["sender"], params["password"])
+        server.send_message(msg, from_addr=params["sender"], to_addrs=params["recipient"])
 
-if __name__ == "__main__":
+def main():
     # initialize variables
     currency1 = "USD/RUB"
     currency2 = "JPY/RUB"
@@ -161,19 +167,25 @@ if __name__ == "__main__":
         # check if report exists
         if not isfile(attachment_path):
             print(f"Not found\nRequesting data from server")
-            # get data
-            for currency in data_dict.keys():
+            # get data from server
+            for currency in data_dict:
                 data = get_data(currency, moment_start, moment_end)
                 data_dict[currency] = parse_response_to_dict(data)
-            # make xlsx file
             print("Server request successfull")
-            make_xlsx(data_dict)
-            print("Report generation successfull")
 
+            # make xlsx file
+            make_xlsx(data_dict, report_name)
+            print("Report generation successfull")
+            
+        else:
+            print("Found!")   
         # send email
-        print(f"Sending {report_name}...")
-        send_email(params_path, attachment_path)
-        print("Success")
+        # print(f"Sending {report_name}...")
+        # send_email(params_path, attachment_path)
+        # print("Success")
 
     except:
         print(f"########\n{traceback.format_exc()}########\n")
+
+if __name__ == "__main__":
+    main()
